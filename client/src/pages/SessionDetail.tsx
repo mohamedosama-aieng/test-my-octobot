@@ -10,12 +10,35 @@ import { useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
+import { FilePreviewCard, parseFileContent } from "@/components/FilePreview";
 
 /** Convert standalone image URLs in text to markdown image syntax */
 function formatImageUrls(text: string): string {
   return text.replace(
     /(?<!\]\()(https?:\/\/[^\s<)"]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|tiff)|https?:\/\/files\.octobot\.it\.com[^\s<)"]*)/gi,
     (url) => `\n![](${url})\n`
+  );
+}
+
+/** Render content with file preview support */
+function RenderContent({ content }: { content: string }) {
+  const fileSegments = parseFileContent(content);
+  const hasFiles = fileSegments.some(s => s.type === 'file');
+  
+  if (!hasFiles) {
+    return <Streamdown>{formatImageUrls(content)}</Streamdown>;
+  }
+  
+  return (
+    <>
+      {fileSegments.map((seg, i) =>
+        seg.type === 'file' ? (
+          <FilePreviewCard key={i} url={seg.content} theme="light" />
+        ) : (
+          <Streamdown key={i}>{formatImageUrls(seg.content)}</Streamdown>
+        )
+      )}
+    </>
   );
 }
 
@@ -195,12 +218,12 @@ export default function SessionDetailPage() {
                       <span className="text-xs text-muted-foreground">{new Date(msg.createdAt).toLocaleTimeString("ar-EG")}</span>
                     </div>
                     <div className={`rounded-lg p-3 text-sm ${isUser ? "bg-[#D4E8F7]" : "bg-[#E0F4FF]"}`}>
-                      <Streamdown>{formatImageUrls(msg.content)}</Streamdown>
+                      <RenderContent content={msg.content} />
                     </div>
                     {msg.editedContent && (
                       <div className="rounded-lg p-3 text-sm bg-yellow-50 border border-yellow-200">
                         <div className="flex items-center gap-1 text-xs text-yellow-700 mb-1"><Pencil className="h-3 w-3" />الإجابة المعدّلة</div>
-                        <Streamdown>{formatImageUrls(msg.editedContent)}</Streamdown>
+                        <RenderContent content={msg.editedContent} />
                       </div>
                     )}
                     {fb.length > 0 && (

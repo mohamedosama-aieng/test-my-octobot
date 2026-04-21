@@ -14,6 +14,7 @@ import { Streamdown } from "streamdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { LinkPreviews } from "@/components/LinkPreview";
 import { VoiceNotePlayer, parseMessageContent } from "@/components/VoiceNotePlayer";
+import { FilePreviewCard, parseFileContent } from "@/components/FilePreview";
 
 const LOGO_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663346430490/lltjiETQWNdEtrRM.svg";
 const WHATSAPP_LINK = "https://wa.me/201505354810";
@@ -23,6 +24,34 @@ function formatImageUrls(text: string): string {
   return text.replace(
     /(?<!\]\()(https?:\/\/[^\s<)"]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|tiff)|https?:\/\/files\.octobot\.it\.com[^\s<)"]*)/gi,
     (url) => `\n![](${url})\n`
+  );
+}
+
+/** Remove file URLs from text so they don't show as raw links */
+const FILE_EXT_PATTERN = /https?:\/\/[^\s<)"]+\.(?:pdf|doc|docx|xls|xlsx|csv|ppt|pptx|zip|rar|7z|txt|json|xml|mp4|avi|mov|mp3|wav)(?:\?[^\s<)"]*)?/gi;
+function stripFileUrls(text: string): string {
+  return text.replace(FILE_EXT_PATTERN, '').trim();
+}
+
+/** Render a text segment with voice, file, and markdown support */
+function RenderContentSegment({ content, theme }: { content: string; theme: ChatTheme }) {
+  const fileSegments = parseFileContent(content);
+  const hasFiles = fileSegments.some(s => s.type === 'file');
+  
+  if (!hasFiles) {
+    return <Streamdown>{formatImageUrls(content)}</Streamdown>;
+  }
+  
+  return (
+    <>
+      {fileSegments.map((seg, i) =>
+        seg.type === 'file' ? (
+          <FilePreviewCard key={i} url={seg.content} theme={theme} />
+        ) : (
+          <Streamdown key={i}>{formatImageUrls(seg.content)}</Streamdown>
+        )
+      )}
+    </>
   );
 }
 
@@ -689,7 +718,7 @@ export default function ClientChat() {
                       seg.type === "voice" ? (
                         <VoiceNotePlayer key={si} url={seg.content} theme={chatTheme} />
                       ) : (
-                        <Streamdown key={si}>{formatImageUrls(seg.content)}</Streamdown>
+                        <RenderContentSegment key={si} content={seg.content} theme={chatTheme} />
                       )
                     )}
                   </div>
@@ -751,11 +780,11 @@ export default function ClientChat() {
                             seg.type === "voice" ? (
                               <VoiceNotePlayer key={si} url={seg.content} theme={chatTheme} />
                             ) : (
-                              <Streamdown key={si}>{formatImageUrls(seg.content)}</Streamdown>
+                              <RenderContentSegment key={si} content={seg.content} theme={chatTheme} />
                             )
                           )
                         ) : (
-                          <Streamdown>{formatImageUrls(msg.content)}</Streamdown>
+                          <RenderContentSegment content={msg.content} theme={chatTheme} />
                         )}
                       </div>
                     </div>
@@ -782,7 +811,7 @@ export default function ClientChat() {
                             seg.type === "voice" ? (
                               <VoiceNotePlayer key={si} url={seg.content} theme={chatTheme} />
                             ) : (
-                              <Streamdown key={si}>{formatImageUrls(seg.content)}</Streamdown>
+                              <RenderContentSegment key={si} content={seg.content} theme={chatTheme} />
                             )
                           )}
                         </div>
