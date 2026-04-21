@@ -11,6 +11,14 @@ import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 
+/** Convert standalone image URLs in text to markdown image syntax */
+function formatImageUrls(text: string): string {
+  return text.replace(
+    /(?<!\]\()(https?:\/\/[^\s<)"]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|tiff)|https?:\/\/files\.octobot\.it\.com[^\s<)"]*)/gi,
+    (url) => `\n![](${url})\n`
+  );
+}
+
 export default function SessionDetailPage() {
   const params = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -187,12 +195,12 @@ export default function SessionDetailPage() {
                       <span className="text-xs text-muted-foreground">{new Date(msg.createdAt).toLocaleTimeString("ar-EG")}</span>
                     </div>
                     <div className={`rounded-lg p-3 text-sm ${isUser ? "bg-[#D4E8F7]" : "bg-[#E0F4FF]"}`}>
-                      <Streamdown>{msg.content}</Streamdown>
+                      <Streamdown>{formatImageUrls(msg.content)}</Streamdown>
                     </div>
                     {msg.editedContent && (
                       <div className="rounded-lg p-3 text-sm bg-yellow-50 border border-yellow-200">
                         <div className="flex items-center gap-1 text-xs text-yellow-700 mb-1"><Pencil className="h-3 w-3" />الإجابة المعدّلة</div>
-                        <Streamdown>{msg.editedContent}</Streamdown>
+                        <Streamdown>{formatImageUrls(msg.editedContent)}</Streamdown>
                       </div>
                     )}
                     {fb.length > 0 && (

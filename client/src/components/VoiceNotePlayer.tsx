@@ -63,6 +63,8 @@ export function VoiceNotePlayer({ url, theme }: { url: string; theme: ChatTheme 
         return () => cancelAnimationFrame(animFrameRef.current);
     }, [isPlaying, updateProgress]);
 
+    const retryCountRef = useRef(0);
+
     const initAudio = (): Promise<HTMLAudioElement> => {
         return new Promise((resolve, reject) => {
             if (audioRef.current && isLoaded) {
@@ -72,26 +74,74 @@ export function VoiceNotePlayer({ url, theme }: { url: string; theme: ChatTheme 
             const audio = audioRef.current || new Audio();
             audioRef.current = audio;
 
-            const onLoaded = () => {
-                setDuration(audio.duration);
-                setIsLoaded(true);
+            // Important for mobile: set crossOrigin and preload
+            audio.crossOrigin = "anonymous";
+            audio.preload = "auto";
+
+            let settled = false;
+            let timeoutId: ReturnType<typeof setTimeout>;
+
+            const cleanup = () => {
+                clearTimeout(timeoutId);
                 audio.removeEventListener("loadedmetadata", onLoaded);
+                audio.removeEventListener("canplay", onLoaded);
                 audio.removeEventListener("error", onErr);
+            };
+
+            const onLoaded = () => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                const dur = audio.duration;
+                if (isFinite(dur) && dur > 0) setDuration(dur);
+                setIsLoaded(true);
                 resolve(audio);
             };
+
             const onErr = () => {
-                audio.removeEventListener("loadedmetadata", onLoaded);
-                audio.removeEventListener("error", onErr);
-                reject(new Error("Failed to load audio"));
+                if (settled) return;
+                settled = true;
+                cleanup();
+                // Auto-retry once before giving up
+                if (retryCountRef.current < 1) {
+                    retryCountRef.current++;
+                    audioRef.current = null;
+                    setIsLoaded(false);
+                    // Small delay then retry
+                    setTimeout(() => {
+                        initAudio().then(resolve).catch(reject);
+                    }, 500);
+                } else {
+                    reject(new Error("Failed to load audio"));
+                }
             };
+
             const onEnded = () => {
                 setIsPlaying(false);
                 setCurrentTime(0);
             };
 
+            // Listen to both events - mobile sometimes skips loadedmetadata
             audio.addEventListener("loadedmetadata", onLoaded);
+            audio.addEventListener("canplay", onLoaded);
             audio.addEventListener("error", onErr);
             audio.addEventListener("ended", onEnded);
+
+            // Timeout after 15s - don't hang forever
+            timeoutId = setTimeout(() => {
+                if (!settled) {
+                    settled = true;
+                    cleanup();
+                    // If audio has some data loaded, try to play anyway
+                    if (audio.readyState >= 2) {
+                        setIsLoaded(true);
+                        resolve(audio);
+                    } else {
+                        reject(new Error("Audio load timed out"));
+                    }
+                }
+            }, 15000);
+
             audio.src = streamUrl;
             audio.load();
         });

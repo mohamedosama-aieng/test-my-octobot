@@ -21,7 +21,7 @@ const WHATSAPP_LINK = "https://wa.me/201505354810";
 /** Convert standalone image URLs in text to markdown image syntax */
 function formatImageUrls(text: string): string {
   return text.replace(
-    /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|tiff))/gi,
+    /(?<!\]\()(https?:\/\/[^\s<)"]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|tiff)|https?:\/\/files\.octobot\.it\.com[^\s<)"]*)/gi,
     (url) => `\n![](${url})\n`
   );
 }
