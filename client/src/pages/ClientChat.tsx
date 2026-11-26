@@ -2,10 +2,20 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Send, ThumbsUp, ThumbsDown, Pencil, StickyNote, Star, Loader2, Bot, User,
-  CheckCircle2, Sparkles, Zap, Shield, Brain, Sun, Moon, Megaphone, Phone, RefreshCcw
+  Send, ThumbsUp, ThumbsDown, Pencil, StickyNote, Star, Loader2, Bot,
+  CheckCircle2, MessageCircle, Sparkles, Zap, Shield, Brain, Megaphone, Phone
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "wouter";
@@ -64,6 +74,12 @@ type ChatMessage = {
 };
 
 type ChatTheme = "dark" | "light";
+
+function formatMessageTime(value: Date | string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("ar-EG", { hour: "2-digit", minute: "2-digit" }).format(date);
+}
 
 // ============ ANIMATED BACKGROUND PARTICLES ============
 function ParticleField({ theme }: { theme: ChatTheme }) {
@@ -306,6 +322,7 @@ export default function ClientChat() {
   const [editContent, setEditContent] = useState("");
   const [notesModal, setNotesModal] = useState(false);
   const [notesContent, setNotesContent] = useState("");
+  const [newSessionConfirmOpen, setNewSessionConfirmOpen] = useState(false);
   const [reviewModal, setReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -313,12 +330,6 @@ export default function ClientChat() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  const toggleChatTheme = () => {
-    const next = chatTheme === "dark" ? "light" : "dark";
-    setChatTheme(next);
-    localStorage.setItem("chat-theme", next);
-  };
 
   // Initialize session
   useEffect(() => {
@@ -448,7 +459,11 @@ export default function ClientChat() {
   // ============ NEW SESSION (REFRESH) ============
   const handleNewSession = useCallback(() => {
     if (!token || isRefreshing || isLoading) return;
-    if (!confirm("هل تريد بدء محادثة جديدة؟ سيتم حفظ المحادثة الحالية.")) return;
+    setNewSessionConfirmOpen(true);
+  }, [token, isRefreshing, isLoading]);
+
+  const confirmNewSession = useCallback(() => {
+    if (!token || isRefreshing || isLoading) return;
     setIsRefreshing(true);
     createNewSession.mutate({ shareToken: token }, {
       onSuccess: (data) => {
@@ -570,115 +585,75 @@ export default function ClientChat() {
         animate={{ y: 0, opacity: 1 }}
         className="relative z-20 shrink-0"
       >
-        <div className={headerBg}>
-          {/* Glow line */}
-          <div className={`absolute bottom-0 left-0 right-0 h-px bg-gradient-to-l from-transparent ${isDark ? "via-cyan-500/30" : "via-blue-500/20"} to-transparent`} />
-
-          <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
-            {/* Brand collaboration */}
-            <div className="flex items-center gap-3">
-              <div className="relative group">
-                <div className={`absolute inset-0 rounded-xl blur-md group-hover:blur-lg transition-all ${isDark ? "bg-cyan-400/20" : "bg-blue-400/10"}`} />
-                <div className={`relative h-10 w-10 rounded-xl flex items-center justify-center overflow-hidden ${isDark
-                  ? "bg-gradient-to-br from-[#0d1a30] to-[#162040] border border-cyan-500/20"
-                  : "bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200"
-                  }`}>
-                  <img src={LOGO_URL} alt="DK-OctoBot" className={`h-7 w-7 ${isDark ? "drop-shadow-[0_0_8px_rgba(76,201,240,0.3)]" : ""}`} />
+        <div className={`${headerBg} dk-chat-header ${isDark ? "" : "dk-chat-header-light"}`}>
+          <div className="dk-header-main" dir="ltr">
+            <div className="dk-brand-block" dir="ltr">
+              <img src="/assets/octobot-symbol.png" alt="DK-OctoBot" className="dk-brand-logo" />
+              <div className="dk-brand-copy" dir="rtl">
+                <div className="dk-brand-name">يلا تست</div>
+                <div className="dk-brand-description">
+                  منصة اختبار وتقييم الـ&nbsp;<bdi dir="ltr" lang="en">AI Agent</bdi>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity }}>
-                  <Zap className={`h-3 w-3 ${isDark ? "text-cyan-400/60" : "text-blue-400/60"}`} />
-                </motion.div>
-              </div>
-
-              {bot?.brandLogoUrl && (
-                <div className="relative">
-                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center overflow-hidden ${isDark ? "bg-white/[0.06] border border-white/[0.1]" : "bg-gray-50 border border-gray-200"
-                    }`}>
-                    <img src={bot.brandLogoUrl} alt="" className="h-7 w-7 rounded-lg object-cover" />
-                  </div>
-                </div>
-              )}
-
-              <div className="mr-1">
-                <div className="flex items-center gap-2">
-                  <h1 className={`font-bold text-sm leading-tight ${textPrimary}`}>
-                    {bot?.name || "AI Bot"}
-                  </h1>
-                  <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${isDark ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-green-50 border border-green-200"}`}>
-                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDark ? "bg-emerald-400" : "bg-green-500"}`} />
-                    <span className={`text-[10px] font-medium ${isDark ? "text-emerald-400" : "text-green-600"}`}>متصل</span>
-                  </div>
-                </div>
-                <p className={`text-[11px] mt-0.5 flex items-center gap-1 ${textSecondary}`}>
-                  <Sparkles className="h-3 w-3" />
-                  مدعوم بالذكاء الاصطناعي من DK-OctoBot
-                </p>
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-2">
-              {/* New session / refresh */}
-              <button
-                onClick={handleNewSession}
-                disabled={isRefreshing || isLoading}
-                className={`group relative p-2 rounded-xl transition-all duration-300 ${isDark
-                  ? "bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-cyan-500/20"
-                  : "bg-gray-100 hover:bg-gray-200 border border-gray-200 hover:border-blue-300"
-                  } disabled:opacity-40 disabled:cursor-not-allowed`}
-                title="بدء محادثة جديدة"
-              >
-                <RefreshCcw className={`h-4 w-4 transition-colors ${isRefreshing ? "animate-spin" : ""} ${isDark ? "text-white/40 group-hover:text-cyan-400" : "text-gray-400 group-hover:text-blue-500"}`} />
-              </button>
-              {/* Theme toggle */}
-              <button
-                onClick={toggleChatTheme}
-                className={`group relative p-2 rounded-xl transition-all duration-300 ${isDark
-                  ? "bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-cyan-500/20"
-                  : "bg-gray-100 hover:bg-gray-200 border border-gray-200 hover:border-blue-300"
-                  }`}
-                title={isDark ? "الوضع الفاتح" : "الوضع الداكن"}
-              >
-                {isDark ? (
-                  <Sun className="h-4 w-4 text-white/40 group-hover:text-amber-400 transition-colors" />
+            <div className="dk-agent-summary" dir="rtl">
+              <div className="dk-agent-heading">
+                <h1 className={isDark ? "text-base font-bold text-white sm:text-lg" : "text-base font-bold text-slate-900 sm:text-lg"}>
+                  {bot?.name || "AI Bot"}
+                </h1>
+                <span className={isDark ? "dk-online-status" : "dk-online-status dk-online-status-light"}>
+                  <span className="dk-online-dot" />
+                  متصل الآن
+                </span>
+              </div>
+              <p className={isDark ? "dk-agent-description text-slate-300/75" : "dk-agent-description text-slate-600"}>
+                <Sparkles className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />
+                مدعوم بالذكاء الاصطناعي من DK-OctoBot
+              </p>
+            </div>
+          </div>
+
+          <div className={isDark ? "dk-header-actions" : "dk-header-actions dk-header-actions-light"}>
+            <div className="dk-header-actions-inner" dir="ltr">
+              <div className="dk-header-utilities">
+                {!reviewSubmitted ? (
+                  <button
+                    onClick={() => setReviewModal(true)}
+                    className="dk-review-button"
+                    title="تعليقك عن الاختبار"
+                  >
+                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                    <span>تعليقك عن الاختبار</span>
+                  </button>
                 ) : (
-                  <Moon className="h-4 w-4 text-gray-400 group-hover:text-indigo-500 transition-colors" />
+                  <div className="dk-review-submitted">
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                    <span>تم التقييم</span>
+                  </div>
                 )}
-              </button>
-
-              <button
-                onClick={() => setNotesModal(true)}
-                className={`group relative p-2 rounded-xl transition-all duration-300 ${isDark
-                  ? "bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-cyan-500/20"
-                  : "bg-gray-100 hover:bg-gray-200 border border-gray-200 hover:border-blue-300"
-                  }`}
-                title="ملاحظات الجلسة"
-              >
-                <StickyNote className={`h-4 w-4 transition-colors ${isDark ? "text-white/40 group-hover:text-cyan-400" : "text-gray-400 group-hover:text-blue-500"}`} />
-              </button>
-
-              {!reviewSubmitted ? (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setReviewModal(true)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-300 ${isDark
-                    ? "bg-gradient-to-l from-cyan-500/20 to-blue-600/20 hover:from-cyan-500/30 hover:to-blue-600/30 border border-cyan-500/20 text-cyan-300"
-                    : "bg-gradient-to-l from-blue-500/10 to-indigo-500/10 hover:from-blue-500/20 hover:to-indigo-500/20 border border-blue-300 text-blue-600"
-                    }`}
+                <button
+                  onClick={() => setNotesModal(true)}
+                  className="dk-notes-button"
+                  title="ملاحظات الجلسة"
+                  aria-label="ملاحظات الجلسة"
                 >
-                  <Star className="h-3.5 w-3.5" />
-                  <span>إرسال التقييم</span>
-                </motion.button>
-              ) : (
-                <div className={`flex items-center gap-1.5 px-3 py-2 rounded-xl ${isDark ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-green-50 border border-green-200"}`}>
-                  <CheckCircle2 className={`h-3.5 w-3.5 ${isDark ? "text-emerald-400" : "text-green-600"}`} />
-                  <span className={`text-xs font-medium ${isDark ? "text-emerald-400" : "text-green-600"}`}>تم التقييم</span>
-                </div>
-              )}
+                  <StickyNote className="h-4 w-4" aria-hidden="true" />
+                  <span>ملاحظات الجلسة</span>
+                </button>
+              </div>
+
+              <div className="dk-header-nav" dir="rtl">
+                <button
+                  onClick={handleNewSession}
+                  disabled={isRefreshing || isLoading}
+                  className="dk-header-nav-button"
+                  title="بدء محادثة جديدة"
+                >
+                  <Zap className="h-4 w-4" aria-hidden="true" />
+                  <span>جلسة جديدة</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -692,27 +667,48 @@ export default function ClientChat() {
           <BannerDisplay banners={banners} theme={chatTheme} />
 
           {/* Welcome message */}
+          {messages.length === 0 && !bot?.firstMessage && (
+            <motion.section
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+              className={isDark ? "dk-empty-state" : "dk-empty-state dk-empty-state-light"}
+              dir="rtl"
+              aria-labelledby="dk-empty-state-title"
+            >
+              <div className="dk-empty-state-content">
+                <div className="dk-empty-avatar-wrap" aria-hidden="true">
+                  <div className="dk-empty-avatar-halo" />
+                  <img src="/assets/yalla-bot-reference.png" alt="" className="dk-empty-avatar" />
+                  <Sparkles className="dk-empty-sparkle" />
+                </div>
+                <h2 id="dk-empty-state-title" className="dk-empty-state-title">
+                  مرحباً بك في DK-OctoBot
+                  <Sparkles aria-hidden="true" />
+                </h2>
+                <p className="dk-empty-state-description">
+                  جرب محادثة مباشرة مع الـ AI Agent الخاص بك وتأكد من أدائه قبل الإطلاق.
+                </p>
+              </div>
+            </motion.section>
+          )}
+
           {bot?.firstMessage && messages.length === 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="flex items-start gap-3 flex-row-reverse"
+              className={`dk-chat-message-row is-bot flex items-start gap-3 flex-row-reverse ${isDark ? "is-dark" : "is-light"}`}
             >
-              <div className="relative">
-                <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 backdrop-blur-sm ${isDark
-                  ? "bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/20"
-                  : "bg-gradient-to-br from-blue-100 to-indigo-100 border border-blue-200"
-                  }`}>
-                  <Bot className={`h-4 w-4 ${isDark ? "text-cyan-400" : "text-blue-600"}`} />
-                </div>
-                <div className={`absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full border-2 ${isDark ? "bg-emerald-400 border-[#0a0e1a]" : "bg-green-500 border-white"}`} />
+              <div className={`dk-chat-avatar-frame relative shrink-0 is-bot ${isDark ? "is-dark" : "is-light"}`}>
+                <img src="/assets/yalla-bot-reference.png" alt={`صورة ${bot?.name || "المساعد"}`} className="dk-chat-avatar-image" />
+                <span className="dk-chat-avatar-status" aria-label="متصل الآن" />
               </div>
-              <div className="max-w-[85%] sm:max-w-[75%]">
-                <div className={`rounded-2xl rounded-tr-sm px-4 py-3 shadow-lg ${isDark
-                  ? "bg-white/[0.04] border border-white/[0.08] backdrop-blur-md"
-                  : "bg-white border border-gray-200 shadow-md"
-                  }`}>
+              <div className="dk-message-content is-bot-reply space-y-2">
+                <div className="dk-message-meta">
+                  <span className="dk-message-sender">{bot?.name || "المساعد"}</span>
+                </div>
+                <div className="dk-message-bubble is-bot-bubble rounded-2xl rounded-tr-sm px-4 py-3 shadow-lg">
                   <div className={`text-sm leading-relaxed ${isDark ? "text-white/80 prose-invert" : "text-gray-700"}`}>
                     {parseMessageContent(bot.firstMessage).map((seg, si) =>
                       seg.type === "voice" ? (
@@ -731,6 +727,7 @@ export default function ClientChat() {
           <AnimatePresence mode="popLayout">
             {messages.map((msg) => {
               const isUser = msg.role === "user";
+              const messageTime = formatMessageTime(msg.createdAt);
               return (
                 <motion.div
                   key={msg.id}
@@ -738,41 +735,26 @@ export default function ClientChat() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.3, delay: 0.05 }}
-                  className={`flex items-start gap-3 ${isUser ? "flex-row" : "flex-row-reverse"}`}
+                  className={`dk-chat-message-row flex items-start gap-3 ${isUser ? "is-user flex-row" : "is-bot flex-row-reverse"} ${isDark ? "is-dark" : "is-light"}`}
                 >
                   {/* Avatar */}
-                  <div className="relative shrink-0">
-                    {isUser ? (
-                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${isDark
-                        ? "bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border border-blue-500/20"
-                        : "bg-gradient-to-br from-blue-100 to-indigo-100 border border-blue-200"
-                        }`}>
-                        <User className={`h-4 w-4 ${isDark ? "text-blue-400" : "text-blue-600"}`} />
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center backdrop-blur-sm ${isDark
-                          ? "bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/20"
-                          : "bg-gradient-to-br from-blue-100 to-indigo-100 border border-blue-200"
-                          }`}>
-                          <Bot className={`h-4 w-4 ${isDark ? "text-cyan-400" : "text-blue-600"}`} />
-                        </div>
-                        <div className={`absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full border-2 ${isDark ? "bg-emerald-400 border-[#0a0e1a]" : "bg-green-500 border-white"}`} />
-                      </div>
-                    )}
+                  <div className={`dk-chat-avatar-frame relative shrink-0 ${isUser ? "is-user" : "is-bot"} ${isDark ? "is-dark" : "is-light"}`}>
+                    <img
+                      src={isUser ? "/assets/default-user-avatar.svg" : "/assets/yalla-bot-reference.png"}
+                      alt={isUser ? `الصورة الشخصية لـ ${tester?.name || "العميل"}` : `صورة ${bot?.name || "المساعد"}`}
+                      className="dk-chat-avatar-image"
+                    />
+                    {!isUser && <span className="dk-chat-avatar-status" aria-label="متصل الآن" />}
                   </div>
 
                   {/* Message bubble */}
-                  <div className="max-w-[85%] sm:max-w-[75%] space-y-2">
+                  <div className={`dk-message-content space-y-2 ${isUser ? "is-user-message" : "is-bot-reply"}`}>
+                    <div className="dk-message-meta">
+                      <span className="dk-message-sender">{isUser ? tester?.name || "أنت" : bot?.name || "المساعد"}</span>
+                      {messageTime && <time className="dk-message-time">{messageTime}</time>}
+                    </div>
                     <div
-                      className={`rounded-2xl px-4 py-3 shadow-lg ${isUser
-                        ? isDark
-                          ? "bg-gradient-to-l from-blue-600/90 to-blue-700/90 text-white rounded-tl-sm border border-blue-500/20"
-                          : "bg-gradient-to-l from-blue-500 to-blue-600 text-white rounded-tl-sm shadow-blue-500/20"
-                        : isDark
-                          ? "bg-white/[0.04] border border-white/[0.08] backdrop-blur-md text-white/80 rounded-tr-sm"
-                          : "bg-white border border-gray-200 text-gray-700 rounded-tr-sm shadow-md"
-                        }`}
+                      className={`dk-message-bubble rounded-2xl px-4 py-3 shadow-lg ${isUser ? "is-user-bubble" : "is-bot-bubble"}`}
                     >
                       <div className={`text-sm leading-relaxed ${!isUser && isDark ? "prose-invert" : ""}`}>
                         {!isUser ? (
@@ -820,36 +802,30 @@ export default function ClientChat() {
 
                     {/* Action buttons for bot messages */}
                     {!isUser && (
-                      <div className="flex gap-1 mt-1">
+                      <div className="dk-message-actions">
                         <button
                           onClick={() => { setFeedbackModal({ messageId: msg.id, type: "like" }); setFeedbackComment(""); }}
-                          className={`group p-1.5 rounded-lg border border-transparent transition-all duration-300 ${isDark
-                            ? "bg-white/[0.02] hover:bg-emerald-500/10 hover:border-emerald-500/20"
-                            : "bg-gray-50 hover:bg-green-50 hover:border-green-200"
-                            }`}
+                          className="dk-message-action-button is-positive"
                           title="إعجاب"
+                          aria-label="إعجاب بالرد"
                         >
-                          <ThumbsUp className={`h-3.5 w-3.5 transition-colors ${isDark ? "text-white/20 group-hover:text-emerald-400" : "text-gray-300 group-hover:text-green-500"}`} />
+                          <ThumbsUp aria-hidden="true" className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => { setFeedbackModal({ messageId: msg.id, type: "dislike" }); setFeedbackComment(""); }}
-                          className={`group p-1.5 rounded-lg border border-transparent transition-all duration-300 ${isDark
-                            ? "bg-white/[0.02] hover:bg-red-500/10 hover:border-red-500/20"
-                            : "bg-gray-50 hover:bg-red-50 hover:border-red-200"
-                            }`}
+                          className="dk-message-action-button is-negative"
                           title="عدم إعجاب"
+                          aria-label="عدم الإعجاب بالرد"
                         >
-                          <ThumbsDown className={`h-3.5 w-3.5 transition-colors ${isDark ? "text-white/20 group-hover:text-red-400" : "text-gray-300 group-hover:text-red-500"}`} />
+                          <ThumbsDown aria-hidden="true" className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => { setEditModal({ messageId: msg.id, content: msg.content }); setEditContent(msg.editedContent || msg.content); }}
-                          className={`group p-1.5 rounded-lg border border-transparent transition-all duration-300 ${isDark
-                            ? "bg-white/[0.02] hover:bg-cyan-500/10 hover:border-cyan-500/20"
-                            : "bg-gray-50 hover:bg-blue-50 hover:border-blue-200"
-                            }`}
+                          className="dk-message-action-button is-edit"
                           title="تعديل"
+                          aria-label="تعديل الرد"
                         >
-                          <Pencil className={`h-3.5 w-3.5 transition-colors ${isDark ? "text-white/20 group-hover:text-cyan-400" : "text-gray-300 group-hover:text-blue-500"}`} />
+                          <Pencil aria-hidden="true" className="h-4 w-4" />
                         </button>
                       </div>
                     )}
@@ -913,6 +889,58 @@ export default function ClientChat() {
           </div>
         </div>
       </motion.div>
+
+      <AlertDialog open={newSessionConfirmOpen} onOpenChange={setNewSessionConfirmOpen}>
+        <AlertDialogContent
+          className={`max-w-md overflow-hidden p-0 font-tajawal ${isDark
+            ? "border-cyan-300/15 bg-[#101a31] text-white shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+            : "border-blue-200 bg-white text-slate-900 shadow-[0_24px_80px_rgba(15,23,42,0.2)]"
+          }`}
+          dir="rtl"
+        >
+          <div className={`h-1 w-full ${isDark
+            ? "bg-gradient-to-l from-cyan-400 via-blue-500 to-indigo-500"
+            : "bg-gradient-to-l from-blue-500 to-indigo-500"
+          }`} />
+          <AlertDialogHeader className="gap-3 px-6 pt-6 text-right sm:text-right">
+            <div className="flex items-start gap-4">
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border ${isDark
+                ? "border-cyan-300/20 bg-cyan-400/10 text-cyan-300"
+                : "border-blue-200 bg-blue-50 text-blue-600"
+              }`}>
+                <MessageCircle className="h-6 w-6" aria-hidden="true" />
+              </div>
+              <div className="space-y-2 pt-1">
+                <AlertDialogTitle className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
+                  بدء محادثة جديدة؟
+                </AlertDialogTitle>
+                <AlertDialogDescription className={`text-sm leading-6 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                  سيتم حفظ المحادثة الحالية وفتح جلسة جديدة مع نفس المساعد.
+                </AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter className={`flex-row gap-3 border-t px-6 py-4 ${isDark ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50/80"}`}>
+            <AlertDialogAction
+              onClick={confirmNewSession}
+              disabled={isRefreshing || isLoading}
+              className="min-h-11 flex-1 border-0 bg-gradient-to-l from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-950/25 hover:from-blue-500 hover:to-indigo-500 focus-visible:ring-blue-400"
+            >
+              {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Zap className="h-4 w-4" aria-hidden="true" />}
+              بدء جلسة جديدة
+            </AlertDialogAction>
+            <AlertDialogCancel
+              disabled={isRefreshing}
+              className={`min-h-11 flex-1 ${isDark
+                ? "border-white/10 bg-white/[0.04] text-slate-200 hover:bg-white/[0.08] hover:text-white"
+                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+              }`}
+            >
+              إلغاء
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ===== FEEDBACK MODAL ===== */}
       <Dialog open={!!feedbackModal} onOpenChange={(o) => { if (!o) setFeedbackModal(null); }}>
