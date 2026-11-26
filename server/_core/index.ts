@@ -10,7 +10,17 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { seedDefaultAdmin, getDb } from "../db";
+import { seedDefaultAdmin, getBotById, getClientTesterByToken, getDb } from "../db";
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]!);
+}
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -168,6 +178,54 @@ async function startServer() {
       createContext,
     })
   );
+
+  app.get(/^\/chat\/([A-Za-z0-9_-]{16,64})\/?$/, async (req, res, next) => {
+    try {
+      const token = req.params[0];
+      const tester = await getClientTesterByToken(token);
+      const bot = tester && tester.isActive && !tester.deletedAt
+        ? await getBotById(tester.botId)
+        : undefined;
+
+      const templatePath = process.env.NODE_ENV === "development"
+        ? path.resolve(process.cwd(), "client", "index.html")
+        : path.resolve(process.cwd(), "dist", "public", "index.html");
+      const template = await fs.promises.readFile(templatePath, "utf-8");
+      const botName = bot?.name || "مساعدك الذكي";
+      const title = `اختبر ${botName} مع يلا تست | DK-OctoBot`;
+      const description = `ابدأ محادثة مباشرة لاختبار ${botName} وتقييم أدائه قبل الإطلاق عبر يلا تست.`;
+      const pageUrl = `https://yallatest.octobot.it.com/chat/${encodeURIComponent(token)}`;
+      const imageUrl = "https://yallatest.octobot.it.com/assets/share-card.png";
+      const metadata = `<!-- SHARE_METADATA_START -->
+  <meta name="theme-color" content="#071226" />
+  <meta name="description" content="${escapeHtml(description)}" />
+  <title>${escapeHtml(title)}</title>
+  <meta property="og:title" content="${escapeHtml(title)}" />
+  <meta property="og:description" content="${escapeHtml(description)}" />
+  <meta property="og:image" content="${imageUrl}" />
+  <meta property="og:image:secure_url" content="${imageUrl}" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="ar_EG" />
+  <meta property="og:site_name" content="يلا تست | DK-OctoBot" />
+  <meta property="og:url" content="${pageUrl}" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${escapeHtml(title)}" />
+  <meta name="twitter:description" content="${escapeHtml(description)}" />
+  <meta name="twitter:image" content="${imageUrl}" />
+  <!-- SHARE_METADATA_END -->`;
+
+      return res.status(200).type("html").send(template.replace(
+        /<!-- SHARE_METADATA_START -->[\s\S]*?<!-- SHARE_METADATA_END -->/,
+        metadata
+      ));
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);

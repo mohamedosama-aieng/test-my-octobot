@@ -64,6 +64,7 @@ function SingleLinkPreview({ url, theme }: { url: string; theme: ChatTheme }) {
     const DomainIcon = getDomainIcon(data.domain);
     const hasImage = data.image && !data.image.includes("undefined");
     const displayTitle = data.title || data.siteName || data.domain;
+    const isYallaTest = data.domain === "yallatest.octobot.it.com";
 
     return (
         <motion.a
@@ -96,11 +97,19 @@ function SingleLinkPreview({ url, theme }: { url: string; theme: ChatTheme }) {
 
             <div className="p-3 flex items-start gap-3">
                 {/* Favicon / domain icon */}
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isDark
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isYallaTest
+                    ? "bg-[#0b1730] border border-cyan-300/20 shadow-inner"
+                    : isDark
                     ? "bg-white/[0.06]"
                     : "bg-white border border-gray-200"
                     }`}>
-                    {data.favicon ? (
+                    {isYallaTest ? (
+                        <img
+                            src="/assets/octobot-symbol.png"
+                            alt=""
+                            className="w-7 h-6 object-contain"
+                        />
+                    ) : data.favicon ? (
                         <img
                             src={data.favicon}
                             alt=""
