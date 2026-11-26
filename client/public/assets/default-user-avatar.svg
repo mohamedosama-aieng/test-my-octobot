@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="13" y1="11" x2="82" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#183B68" />
+      <stop offset="1" stop-color="#172344" />
+    </linearGradient>
+    <linearGradient id="shirt" x1="30" y1="57" x2="66" y2="91" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#53D7F4" />
+      <stop offset="1" stop-color="#3673D8" />
+    </linearGradient>
+    <linearGradient id="skin" x1="37" y1="24" x2="61" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE0C7" />
+      <stop offset="1" stop-color="#E8AF8D" />
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="matrix(0 49 -49 0 48 47)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2EB6E7" stop-opacity=".22" />
+      <stop offset="1" stop-color="#2EB6E7" stop-opacity="0" />
+    </radialGradient>
+    <clipPath id="clip">
+      <circle cx="48" cy="48" r="46" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#clip)">
+    <circle cx="48" cy="48" r="46" fill="url(#bg)" />
+    <circle cx="48" cy="47" r="49" fill="url(#glow)" />
+    <path d="M13 97c2-20 14-31 35-31s33 11 35 31H13Z" fill="url(#shirt)" />
+    <path d="m37 64 11 12 11-12-4-8H41l-4 8Z" fill="#F2C5A7" />
+    <path d="M31 39c0-15 7-24 18-24s18 9 18 24v6c0 14-8 24-18 24S31 59 31 45v-6Z" fill="url(#skin)" />
+    <path d="M29 42c-3-18 5-29 20-29 13 0 21 9 19 27-4-2-8-7-10-13-8 8-17 11-29 11v4Z" fill="#18233B" />
+    <path d="M38 44c2-2 5-2 7 0M52 44c2-2 5-2 7 0" stroke="#30445D" stroke-linecap="round" stroke-width="2" />
+    <path d="M43 54c3 3 7 3 10 0" stroke="#A45154" stroke-linecap="round" stroke-width="2" />
+    <path d="m30 71 18 13 18-13 11 10-7 18H26l-7-18 11-10Z" fill="url(#shirt)" />
+    <path d="m40 66 8 10 8-10 5 4-13 14-13-14 5-4Z" fill="#E9F5FF" />
+    <path d="M43 85h10l4 14H39l4-14Z" fill="#243A62" />
+    <circle cx="48" cy="84" r="4" fill="#72F2F2" />
+    <circle cx="48" cy="84" r="7" stroke="#9AF5FF" stroke-opacity=".45" />
+  </g>
+  <circle cx="48" cy="48" r="45.5" stroke="#65D9F4" stroke-opacity=".62" />
+</svg>
