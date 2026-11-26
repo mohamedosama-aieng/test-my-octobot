@@ -195,7 +195,7 @@ async function startServer() {
       const title = `اختبر ${botName} مع يلا تست | DK-OctoBot`;
       const description = `ابدأ محادثة مباشرة لاختبار ${botName} وتقييم أدائه قبل الإطلاق عبر يلا تست.`;
       const pageUrl = `https://yallatest.octobot.it.com/chat/${encodeURIComponent(token)}`;
-      const imageUrl = "https://yallatest.octobot.it.com/assets/share-card.png";
+      const imageUrl = "https://yallatest.octobot.it.com/assets/share-card-square.png?v=2";
       const metadata = `<!-- SHARE_METADATA_START -->
   <meta name="theme-color" content="#071226" />
   <meta name="description" content="${escapeHtml(description)}" />
@@ -206,7 +206,7 @@ async function startServer() {
   <meta property="og:image:secure_url" content="${imageUrl}" />
   <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
+  <meta property="og:image:height" content="1200" />
   <meta property="og:locale" content="ar_EG" />
   <meta property="og:site_name" content="يلا تست | DK-OctoBot" />
   <meta property="og:url" content="${pageUrl}" />
